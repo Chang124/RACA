@@ -1,14 +1,32 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, Edit2, Trash2, Plus, X } from 'lucide-react';
+import { Search, Edit2, Trash2, Plus, X, Calendar } from 'lucide-react';
+
+// Mock data for "mẫu dây" from FiberInventory
+const mockPatchCordTypes = [
+  { id: '1', cableName: 'Cáp LC-LC 3m' },
+  { id: '2', cableName: 'Cáp LC-SC 5m' },
+  { id: '3', cableName: 'Cáp LC-LC 1m' },
+  { id: '4', cableName: 'Cáp SC-SC 5m' },
+  { id: '5', cableName: 'Cáp LC-SC 1m' },
+];
 
 interface PatchCordConnection {
   id: string;
   label: string;
   startPoint: string;
+  startSlot: string;
+  startCard: string;
+  startPort: string;
   endPoint: string;
+  endSlot: string;
+  endCard: string;
+  endPort: string;
   cableName: string;
+  performer: string;
+  performDate: string;
+  completionDate: string;
   lastUpdatedBy: string;
   lastUpdatedDate: string;
 }
@@ -43,48 +61,78 @@ interface Device {
   id: string;
   rackId: string;
   name: string;
-  portCount: number;
-}
-
-interface Port {
-  portNumber: number;
-  isActive: boolean;
 }
 
 const mockPatchCordConnections: PatchCordConnection[] = [
   {
     id: '1',
     label: 'PC-A-01',
-    startPoint: 'ODF-1-A-01',
-    endPoint: 'Switch-1-01',
+    startPoint: 'ODF-1-A',
+    startSlot: '1',
+    startCard: '2',
+    startPort: '01',
+    endPoint: 'Switch-1',
+    endSlot: '0',
+    endCard: '1',
+    endPort: '01',
     cableName: 'Cáp LC-LC 3m',
+    performer: 'Nguyễn Văn A',
+    performDate: '2024-01-15',
+    completionDate: '2024-01-16',
     lastUpdatedBy: 'Nguyễn Văn A',
     lastUpdatedDate: '2024-01-15',
   },
   {
     id: '2',
     label: 'PC-A-02',
-    startPoint: 'ODF-1-A-02',
-    endPoint: 'Switch-1-02',
+    startPoint: 'ODF-1-A',
+    startSlot: '1',
+    startCard: '2',
+    startPort: '02',
+    endPoint: 'Switch-1',
+    endSlot: '0',
+    endCard: '1',
+    endPort: '02',
     cableName: 'Cáp LC-SC 5m',
+    performer: 'Trần Thị B',
+    performDate: '2024-01-14',
+    completionDate: '2024-01-15',
     lastUpdatedBy: 'Trần Thị B',
     lastUpdatedDate: '2024-01-14',
   },
   {
     id: '3',
     label: 'PC-B-01',
-    startPoint: 'ODF-2-A-01',
-    endPoint: 'Switch-2-01',
+    startPoint: 'ODF-2-A',
+    startSlot: '2',
+    startCard: '1',
+    startPort: '01',
+    endPoint: 'Switch-2',
+    endSlot: '0',
+    endCard: '2',
+    endPort: '01',
     cableName: 'Cáp LC-LC 1m',
+    performer: 'Lê Văn C',
+    performDate: '2024-01-13',
+    completionDate: '2024-01-14',
     lastUpdatedBy: 'Lê Văn C',
     lastUpdatedDate: '2024-01-13',
   },
   {
     id: '4',
     label: 'PC-B-02',
-    startPoint: 'ODF-2-A-02',
-    endPoint: 'Switch-2-02',
+    startPoint: 'ODF-2-A',
+    startSlot: '2',
+    startCard: '1',
+    startPort: '02',
+    endPoint: 'Switch-2',
+    endSlot: '0',
+    endCard: '2',
+    endPort: '02',
     cableName: 'Cáp SC-SC 5m',
+    performer: 'Phạm Thị D',
+    performDate: '2024-01-15',
+    completionDate: '2024-01-17',
     lastUpdatedBy: 'Phạm Thị D',
     lastUpdatedDate: '2024-01-15',
   },
@@ -138,27 +186,50 @@ const mockRacks: Rack[] = [
 ];
 
 const mockDevices: Device[] = [
-  { id: '1', rackId: '1', name: 'Switch-01', portCount: 24 },
-  { id: '2', rackId: '1', name: 'Switch-02', portCount: 48 },
-  { id: '3', rackId: '2', name: 'ODF-01', portCount: 12 },
-  { id: '4', rackId: '3', name: 'Switch-03', portCount: 32 },
+  { id: '1', rackId: '1', name: 'Switch-01' },
+  { id: '2', rackId: '1', name: 'Switch-02' },
+  { id: '3', rackId: '2', name: 'ODF-01' },
+  { id: '4', rackId: '3', name: 'Switch-03' },
 ];
+
+// Default current user
+const currentUser = 'Nguyễn Văn A';
+
+// Get today's date in YYYY-MM-DD format
+const getTodayDate = () => {
+  const today = new Date();
+  return today.toISOString().split('T')[0];
+};
 
 export default function ConnectionManagement() {
   const [activeTab, setActiveTab] = useState<'patch-cord' | 'cable'>('patch-cord');
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
+  
+  // Start point selections
   const [selectedStartDC, setSelectedStartDC] = useState('');
   const [selectedStartRoom, setSelectedStartRoom] = useState('');
   const [selectedStartRack, setSelectedStartRack] = useState('');
   const [selectedStartDevice, setSelectedStartDevice] = useState('');
-  const [selectedStartPort, setSelectedStartPort] = useState('1');
+  const [selectedStartSlot, setSelectedStartSlot] = useState('');
+  const [selectedStartCard, setSelectedStartCard] = useState('');
+  const [selectedStartPort, setSelectedStartPort] = useState('');
+  
+  // End point selections
   const [selectedEndDC, setSelectedEndDC] = useState('');
   const [selectedEndRoom, setSelectedEndRoom] = useState('');
   const [selectedEndRack, setSelectedEndRack] = useState('');
   const [selectedEndDevice, setSelectedEndDevice] = useState('');
-  const [selectedEndPort, setSelectedEndPort] = useState('1');
+  const [selectedEndSlot, setSelectedEndSlot] = useState('');
+  const [selectedEndCard, setSelectedEndCard] = useState('');
+  const [selectedEndPort, setSelectedEndPort] = useState('');
+  
+  // New fields
+  const [selectedCableName, setSelectedCableName] = useState('');
+  const [performer, setPerformer] = useState(currentUser);
+  const [performDate, setPerformDate] = useState(getTodayDate());
+  const [completionDate, setCompletionDate] = useState('');
+  const [completionDateError, setCompletionDateError] = useState('');
 
   const filteredPatchCordConnections = mockPatchCordConnections.filter((item) =>
     item.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -173,30 +244,74 @@ export default function ConnectionManagement() {
   const startRooms = mockRooms.filter((r) => r.dcId === selectedStartDC);
   const startRacks = mockRacks.filter((r) => r.roomId === selectedStartRoom);
   const startDevices = mockDevices.filter((d) => d.rackId === selectedStartRack);
-  const startSelectedDevice = startDevices.find((d) => d.id === selectedStartDevice);
 
   const endRooms = mockRooms.filter((r) => r.dcId === selectedEndDC);
   const endRacks = mockRacks.filter((r) => r.roomId === selectedEndRoom);
   const endDevices = mockDevices.filter((d) => d.rackId === selectedEndRack);
-  const endSelectedDevice = endDevices.find((d) => d.id === selectedEndDevice);
 
   const handleCreateClick = () => {
     setShowCreateModal(true);
+    setPerformer(currentUser);
+    setPerformDate(getTodayDate());
+    setCompletionDate('');
+    setCompletionDateError('');
   };
 
   const handleCloseModal = () => {
     setShowCreateModal(false);
-    setShowEditModal(false);
     setSelectedStartDC('');
     setSelectedStartRoom('');
     setSelectedStartRack('');
     setSelectedStartDevice('');
-    setSelectedStartPort('1');
+    setSelectedStartSlot('');
+    setSelectedStartCard('');
+    setSelectedStartPort('');
     setSelectedEndDC('');
     setSelectedEndRoom('');
     setSelectedEndRack('');
     setSelectedEndDevice('');
-    setSelectedEndPort('1');
+    setSelectedEndSlot('');
+    setSelectedEndCard('');
+    setSelectedEndPort('');
+    setSelectedCableName('');
+    setPerformer(currentUser);
+    setPerformDate(getTodayDate());
+    setCompletionDate('');
+    setCompletionDateError('');
+  };
+
+  const handleCompletionDateChange = (value: string) => {
+    setCompletionDate(value);
+    if (value && performDate && new Date(value) < new Date(performDate)) {
+      setCompletionDateError('Ngày hoàn thành phải sau ngày thực hiện');
+    } else {
+      setCompletionDateError('');
+    }
+  };
+
+  const formatSlotCardPort = (slot: string, card: string, port: string) => {
+    const parts = [];
+    if (slot) parts.push(slot);
+    if (card) parts.push(card);
+    if (port) parts.push(port);
+    return parts.join('-') || '-';
+  };
+
+  const isFormValid = () => {
+    return (
+      selectedStartDC &&
+      selectedStartRoom &&
+      selectedStartRack &&
+      selectedStartDevice &&
+      selectedEndDC &&
+      selectedEndRoom &&
+      selectedEndRack &&
+      selectedEndDevice &&
+      selectedCableName &&
+      performer &&
+      performDate &&
+      (!completionDate || !completionDateError)
+    );
   };
 
   return (
@@ -259,27 +374,37 @@ export default function ConnectionManagement() {
           <table className="w-full text-sm">
             <thead className="sticky top-0 bg-card/50 backdrop-blur border-b border-border">
               <tr>
-                <th className="px-6 py-3 text-left font-semibold text-foreground">Nhãn Dây</th>
-                <th className="px-6 py-3 text-left font-semibold text-foreground">Điểm Đầu</th>
-                <th className="px-6 py-3 text-left font-semibold text-foreground">Điểm Cuối</th>
-                <th className="px-6 py-3 text-left font-semibold text-foreground">Tên Dây</th>
-                <th className="px-6 py-3 text-left font-semibold text-foreground">Người Cập Nhật</th>
-                <th className="px-6 py-3 text-left font-semibold text-foreground">Ngày Cập Nhật</th>
-                <th className="px-6 py-3 text-center font-semibold text-foreground">Hành Động</th>
+                <th className="px-4 py-3 text-left font-semibold text-foreground">Nhãn Dây</th>
+                <th className="px-4 py-3 text-left font-semibold text-foreground">Điểm Đầu</th>
+                <th className="px-4 py-3 text-left font-semibold text-foreground">Slot-Card-Port</th>
+                <th className="px-4 py-3 text-left font-semibold text-foreground">Điểm Cuối</th>
+                <th className="px-4 py-3 text-left font-semibold text-foreground">Slot-Card-Port</th>
+                <th className="px-4 py-3 text-left font-semibold text-foreground">Tên Cáp</th>
+                <th className="px-4 py-3 text-left font-semibold text-foreground">Người Thực Hiện</th>
+                <th className="px-4 py-3 text-left font-semibold text-foreground">Ngày TH</th>
+                <th className="px-4 py-3 text-left font-semibold text-foreground">Ngày HT</th>
+                <th className="px-4 py-3 text-center font-semibold text-foreground">Hành Động</th>
               </tr>
             </thead>
             <tbody>
               {filteredPatchCordConnections.map((item) => (
                 <tr key={item.id} className="table-row">
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-4">
                     <code className="font-mono text-cyan-400">{item.label}</code>
                   </td>
-                  <td className="px-6 py-4 text-foreground">{item.startPoint}</td>
-                  <td className="px-6 py-4 text-foreground">{item.endPoint}</td>
-                  <td className="px-6 py-4 text-foreground">{item.cableName}</td>
-                  <td className="px-6 py-4 text-muted-foreground text-sm">{item.lastUpdatedBy}</td>
-                  <td className="px-6 py-4 text-muted-foreground text-sm">{item.lastUpdatedDate}</td>
-                  <td className="px-6 py-4 text-center">
+                  <td className="px-4 py-4 text-foreground">{item.startPoint}</td>
+                  <td className="px-4 py-4 text-foreground font-mono text-sm">
+                    {formatSlotCardPort(item.startSlot, item.startCard, item.startPort)}
+                  </td>
+                  <td className="px-4 py-4 text-foreground">{item.endPoint}</td>
+                  <td className="px-4 py-4 text-foreground font-mono text-sm">
+                    {formatSlotCardPort(item.endSlot, item.endCard, item.endPort)}
+                  </td>
+                  <td className="px-4 py-4 text-foreground">{item.cableName}</td>
+                  <td className="px-4 py-4 text-muted-foreground text-sm">{item.performer}</td>
+                  <td className="px-4 py-4 text-muted-foreground text-sm">{item.performDate}</td>
+                  <td className="px-4 py-4 text-muted-foreground text-sm">{item.completionDate}</td>
+                  <td className="px-4 py-4 text-center">
                     <div className="flex items-center justify-center gap-2">
                       <button className="p-2 rounded-lg hover:bg-secondary transition-colors text-cyan-400 hover:text-cyan-300">
                         <Edit2 className="w-4 h-4" />
@@ -333,8 +458,8 @@ export default function ConnectionManagement() {
       {/* Create Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur flex items-center justify-center z-50 p-4">
-          <div className="bg-card border border-border rounded-lg shadow-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-border sticky top-0 bg-card">
+          <div className="bg-card border border-border rounded-lg shadow-lg w-full max-w-5xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border sticky top-0 bg-card z-10">
               <h3 className="text-lg font-semibold text-foreground">Tạo Kết Nối Dây Nhảy</h3>
               <button 
                 onClick={handleCloseModal}
@@ -344,6 +469,78 @@ export default function ConnectionManagement() {
             </div>
 
             <div className="p-6">
+              {/* Thông Tin Chung */}
+              <div className="mb-8">
+                <h4 className="text-sm font-semibold text-foreground mb-4">Thông Tin Chung</h4>
+                <div className="grid grid-cols-4 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-foreground block mb-2">Tên Cáp *</label>
+                    <select 
+                      value={selectedCableName}
+                      onChange={(e) => setSelectedCableName(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                    >
+                      <option value="">Chọn loại cáp...</option>
+                      {mockPatchCordTypes.map((cable) => (
+                        <option key={cable.id} value={cable.cableName}>{cable.cableName}</option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-muted-foreground mt-1">Quản lý tại mục &quot;Các Loại Dây&quot; - tab Mẫu Dây</p>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-foreground block mb-2">Người Thực Hiện *</label>
+                    <input 
+                      type="text"
+                      value={performer}
+                      onChange={(e) => setPerformer(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                      placeholder="Nhập tên người thực hiện..."
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-foreground block mb-2">Ngày Thực Hiện *</label>
+                    <div className="relative">
+                      <input 
+                        type="date"
+                        value={performDate}
+                        onChange={(e) => {
+                          setPerformDate(e.target.value);
+                          // Re-validate completion date
+                          if (completionDate && new Date(completionDate) < new Date(e.target.value)) {
+                            setCompletionDateError('Ngày hoàn thành phải sau ngày thực hiện');
+                          } else {
+                            setCompletionDateError('');
+                          }
+                        }}
+                        className="w-full px-3 py-2 rounded-lg bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                      />
+                      <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-foreground block mb-2">Ngày Hoàn Thành</label>
+                    <div className="relative">
+                      <input 
+                        type="date"
+                        value={completionDate}
+                        min={performDate}
+                        onChange={(e) => handleCompletionDateChange(e.target.value)}
+                        className={`w-full px-3 py-2 rounded-lg bg-background border text-foreground focus:outline-none focus:ring-2 ${
+                          completionDateError ? 'border-red-500 focus:ring-red-500' : 'border-border focus:ring-accent'
+                        }`}
+                      />
+                      <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                    </div>
+                    {completionDateError && (
+                      <p className="text-xs text-red-500 mt-1">{completionDateError}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               {/* Điểm Đầu */}
               <div className="mb-8">
                 <h4 className="text-sm font-semibold text-foreground mb-4">Điểm Đầu</h4>
@@ -420,65 +617,39 @@ export default function ConnectionManagement() {
                   </div>
                 </div>
 
-                {/* Port Selection and Visualization */}
-                {startSelectedDevice && (
+                {/* Slot - Card - Port for Start Point */}
+                <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <label className="text-sm font-medium text-foreground block mb-3">
-                      Slot-Card-Port (1-{startSelectedDevice.portCount}) *
-                    </label>
-                    <div className="mb-4">
-                      <input 
-                        type="number"
-                        min="1"
-                        max={startSelectedDevice.portCount}
-                        value={selectedStartPort}
-                        onChange={(e) => {
-                          const value = Math.min(Math.max(1, parseInt(e.target.value) || 1), startSelectedDevice.portCount);
-                          setSelectedStartPort(String(value));
-                        }}
-                        className="w-24 px-3 py-2 rounded-lg bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
-                      />
-                    </div>
-                    
-                    {/* Port Visualization */}
-                    <div className="bg-secondary/20 border border-border rounded-lg p-4">
-                      <div className="grid grid-cols-12 gap-2">
-                        {Array.from({ length: startSelectedDevice.portCount }).map((_, idx) => {
-                          const portNum = idx + 1;
-                          const isSelected = parseInt(selectedStartPort) === portNum;
-                          const isActive = Math.random() > 0.3; // Mock active status
-                          
-                          return (
-                            <button
-                              key={idx}
-                              onClick={() => setSelectedStartPort(String(portNum))}
-                              className={`w-full aspect-square rounded-lg border-2 text-xs font-medium transition-all flex items-center justify-center ${
-                                isSelected
-                                  ? 'border-accent bg-accent/20 text-accent'
-                                  : isActive
-                                  ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:border-emerald-500'
-                                  : 'border-red-500/30 bg-red-500/10 text-red-400 hover:border-red-500'
-                              }`}
-                              title={isActive ? 'Đang hoạt động' : 'Chưa hoạt động'}
-                            >
-                              {portNum}
-                            </button>
-                          );
-                        })}
-                      </div>
-                      <div className="flex gap-4 mt-3 text-xs">
-                        <div className="flex items-center gap-1">
-                          <div className="w-4 h-4 rounded border-2 border-emerald-500/30 bg-emerald-500/10"></div>
-                          <span className="text-emerald-400">Đang hoạt động</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <div className="w-4 h-4 rounded border-2 border-red-500/30 bg-red-500/10"></div>
-                          <span className="text-red-400">Chưa hoạt động</span>
-                        </div>
-                      </div>
-                    </div>
+                    <label className="text-sm font-medium text-foreground block mb-2">Slot</label>
+                    <input 
+                      type="text"
+                      value={selectedStartSlot}
+                      onChange={(e) => setSelectedStartSlot(e.target.value)}
+                      placeholder="Nhập Slot..."
+                      className="w-full px-3 py-2 rounded-lg bg-background border border-border text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                    />
                   </div>
-                )}
+                  <div>
+                    <label className="text-sm font-medium text-foreground block mb-2">Card</label>
+                    <input 
+                      type="text"
+                      value={selectedStartCard}
+                      onChange={(e) => setSelectedStartCard(e.target.value)}
+                      placeholder="Nhập Card..."
+                      className="w-full px-3 py-2 rounded-lg bg-background border border-border text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground block mb-2">Port</label>
+                    <input 
+                      type="text"
+                      value={selectedStartPort}
+                      onChange={(e) => setSelectedStartPort(e.target.value)}
+                      placeholder="Nhập Port..."
+                      className="w-full px-3 py-2 rounded-lg bg-background border border-border text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                    />
+                  </div>
+                </div>
               </div>
 
               {/* Điểm Cuối */}
@@ -557,65 +728,39 @@ export default function ConnectionManagement() {
                   </div>
                 </div>
 
-                {/* Port Selection and Visualization */}
-                {endSelectedDevice && (
+                {/* Slot - Card - Port for End Point */}
+                <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <label className="text-sm font-medium text-foreground block mb-3">
-                      Slot-Card-Port (1-{endSelectedDevice.portCount}) *
-                    </label>
-                    <div className="mb-4">
-                      <input 
-                        type="number"
-                        min="1"
-                        max={endSelectedDevice.portCount}
-                        value={selectedEndPort}
-                        onChange={(e) => {
-                          const value = Math.min(Math.max(1, parseInt(e.target.value) || 1), endSelectedDevice.portCount);
-                          setSelectedEndPort(String(value));
-                        }}
-                        className="w-24 px-3 py-2 rounded-lg bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
-                      />
-                    </div>
-                    
-                    {/* Port Visualization */}
-                    <div className="bg-secondary/20 border border-border rounded-lg p-4">
-                      <div className="grid grid-cols-12 gap-2">
-                        {Array.from({ length: endSelectedDevice.portCount }).map((_, idx) => {
-                          const portNum = idx + 1;
-                          const isSelected = parseInt(selectedEndPort) === portNum;
-                          const isActive = Math.random() > 0.3; // Mock active status
-                          
-                          return (
-                            <button
-                              key={idx}
-                              onClick={() => setSelectedEndPort(String(portNum))}
-                              className={`w-full aspect-square rounded-lg border-2 text-xs font-medium transition-all flex items-center justify-center ${
-                                isSelected
-                                  ? 'border-accent bg-accent/20 text-accent'
-                                  : isActive
-                                  ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:border-emerald-500'
-                                  : 'border-red-500/30 bg-red-500/10 text-red-400 hover:border-red-500'
-                              }`}
-                              title={isActive ? 'Đang hoạt động' : 'Chưa hoạt động'}
-                            >
-                              {portNum}
-                            </button>
-                          );
-                        })}
-                      </div>
-                      <div className="flex gap-4 mt-3 text-xs">
-                        <div className="flex items-center gap-1">
-                          <div className="w-4 h-4 rounded border-2 border-emerald-500/30 bg-emerald-500/10"></div>
-                          <span className="text-emerald-400">Đang hoạt động</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <div className="w-4 h-4 rounded border-2 border-red-500/30 bg-red-500/10"></div>
-                          <span className="text-red-400">Chưa hoạt động</span>
-                        </div>
-                      </div>
-                    </div>
+                    <label className="text-sm font-medium text-foreground block mb-2">Slot</label>
+                    <input 
+                      type="text"
+                      value={selectedEndSlot}
+                      onChange={(e) => setSelectedEndSlot(e.target.value)}
+                      placeholder="Nhập Slot..."
+                      className="w-full px-3 py-2 rounded-lg bg-background border border-border text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                    />
                   </div>
-                )}
+                  <div>
+                    <label className="text-sm font-medium text-foreground block mb-2">Card</label>
+                    <input 
+                      type="text"
+                      value={selectedEndCard}
+                      onChange={(e) => setSelectedEndCard(e.target.value)}
+                      placeholder="Nhập Card..."
+                      className="w-full px-3 py-2 rounded-lg bg-background border border-border text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground block mb-2">Port</label>
+                    <input 
+                      type="text"
+                      value={selectedEndPort}
+                      onChange={(e) => setSelectedEndPort(e.target.value)}
+                      placeholder="Nhập Port..."
+                      className="w-full px-3 py-2 rounded-lg bg-background border border-border text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                    />
+                  </div>
+                </div>
               </div>
 
               {/* Modal Actions */}
@@ -626,7 +771,7 @@ export default function ConnectionManagement() {
                   Hủy
                 </button>
                 <button 
-                  disabled={!selectedStartDC || !selectedStartRoom || !selectedStartRack || !selectedStartDevice || !selectedEndDC || !selectedEndRoom || !selectedEndRack || !selectedEndDevice}
+                  disabled={!isFormValid()}
                   className="px-4 py-2 rounded-lg bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium">
                   Tạo Kết Nối
                 </button>
