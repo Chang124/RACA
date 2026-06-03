@@ -1,15 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { Menu, Cable, Network, Workflow, Map, Home, Plug, GitBranch } from 'lucide-react';
+import { Menu, Cable, Network, Map, Home, Plug, GitBranch } from 'lucide-react';
 import FiberInventory from '@/components/FiberInventory';
-import PatchPanelMapping from '@/components/PatchPanelMapping';
-import CableConfigWizard from '@/components/CableConfigWizard';
+
 import NetworkTopology from '@/components/NetworkTopology';
 import ConnectorTypeManagement from '@/components/ConnectorTypeManagement';
 import ConnectionManagement from '@/components/ConnectionManagement';
 
-type Screen = 'home' | 'inventory' | 'connector-type' | 'connection' | 'patch-panel' | 'cable-config' | 'topology';
+type Screen = 'home' | 'inventory' | 'connector-type' | 'connection' | 'topology';
 
 export default function DCIMDashboard() {
   const [activeScreen, setActiveScreen] = useState<Screen>('home');
@@ -20,8 +19,6 @@ export default function DCIMDashboard() {
     { id: 'inventory', label: 'Các Loại Dây', icon: Cable },
     { id: 'connector-type', label: 'Kiểu Kết Nối', icon: Plug },
     { id: 'connection', label: 'Điều Phối Kết Nối', icon: GitBranch },
-    { id: 'patch-panel', label: 'Ánh Xạ Cổng', icon: Network },
-    { id: 'cable-config', label: 'Cấu Hình Cáp', icon: Workflow },
     { id: 'topology', label: 'Theo Dõi Tôpô', icon: Map },
   ] as const;
 
@@ -96,8 +93,6 @@ export default function DCIMDashboard() {
           {activeScreen === 'inventory' && <FiberInventory />}
           {activeScreen === 'connector-type' && <ConnectorTypeManagement />}
           {activeScreen === 'connection' && <ConnectionManagement />}
-          {activeScreen === 'patch-panel' && <PatchPanelMapping />}
-          {activeScreen === 'cable-config' && <CableConfigWizard />}
           {activeScreen === 'topology' && <NetworkTopology />}
         </div>
       </div>
@@ -129,25 +124,11 @@ function DashboardHome({ onNavigate }: { onNavigate: (screen: Screen) => void })
       color: 'from-emerald-500/20 to-emerald-600/10',
     },
     {
-      id: 'patch-panel',
-      title: 'Ánh Xạ Cổng ODF',
-      description: 'Biểu diễn trực quan và quản lý các cổng khung phân phối quang học',
-      icon: Network,
-      color: 'from-blue-500/20 to-blue-600/10',
-    },
-    {
-      id: 'cable-config',
-      title: 'Cấu Hình Cáp',
-      description: 'Trình hướng dẫn cấu hình vá nâng cao với ánh xạ cáp thân cây hàng loạt',
-      icon: Workflow,
-      color: 'from-purple-500/20 to-purple-600/10',
-    },
-    {
       id: 'topology',
       title: 'Theo Dõi Tôpô Mạng',
       description: 'Theo dõi mạch đầu cuối và hình ảnh hóa liên kết sợi quang',
       icon: Map,
-      color: 'from-emerald-500/20 to-emerald-600/10',
+      color: 'from-blue-500/20 to-blue-600/10',
     },
   ];
 
